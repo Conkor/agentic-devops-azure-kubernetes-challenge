@@ -1,0 +1,73 @@
+name: Azure CD
+
+on:
+  push:
+    branches:
+      - devel
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AZURE_CORE_OUTPUT: none
+      IMAGE_URI: ${{ vars.ACR_NAME }}.azurecr.io/rdicidr:${{ github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_id }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign in to ACR
+        run: az acr login --name "${{ vars.ACR_NAME }}"
+
+      - name: Build and push image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            --tag "$IMAGE_URI" \
+            codebase/rdicidr-0.1.0
+          docker push "$IMAGE_URI"
+
+      - name: Update Azure Web App image
+        run: |
+          az webapp config set \
+            --name "${{ vars.WEBAPP_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --generic-configurations '{"acrUseManagedIdentityCreds": true}'
+          az webapp config container set \
+            --name "${{ vars.WEBAPP_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --container-image-name "$IMAGE_URI" \
+            --container-registry-url "https://${{ vars.ACR_NAME }}.azurecr.io"
+
+      - name: Validate health endpoint
+        env:
+          AZURE_CORE_OUTPUT: json
+        run: |
+          hostname=$(az webapp show \
+            --name "${{ vars.WEBAPP_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --query defaultHostName \
+            --output tsv)
+
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error "https://${hostname}/health"; then
+              exit 0
+            fi
+            echo "Health check attempt ${attempt}/30 failed; retrying in 10 seconds."
+            sleep 10
+          done
+
+          echo "Health endpoint did not become ready: https://${hostname}/health" >&2
+          exit 1
