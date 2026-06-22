@@ -9,7 +9,6 @@
     "node-sass": "^5.0.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
-    "prettier": "3.3.1",
     "react-scripts": "4.0.3",
     "web-vitals": "^1.1.1"
   },
@@ -18,14 +17,12 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "lint": "eslint ./src/",
-    "prettier": "prettier -c ./src/"
+    "lint": "eslint ./src/"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
-      "react-app/jest",
-      "plugin:prettier/recommended"
+      "react-app/jest"
     ]
   },
   "browserslist": {
