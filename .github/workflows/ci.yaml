@@ -1,0 +1,34 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'bugfix/**'
+  pull_request:
+    branches:
+      - devel
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: codebase/rdicidr-0.1.0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: codebase/rdicidr-0.1.0/.nvmrc
+          cache: npm
+          cache-dependency-path: codebase/rdicidr-0.1.0/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test -- --watchAll=false
+        env:
+          REACT_APP_API_URL: https://api.rdicidr.com
+      - name: Build
+        run: npm run build
