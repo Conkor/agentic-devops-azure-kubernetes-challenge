@@ -1,0 +1,9 @@
+.DS_Store export-ignore
+**/.DS_Store export-ignore
+**/node_modules/** export-ignore
+**/build/** export-ignore
+**/dist/** export-ignore
+**/out/** export-ignore
+**/tmp/** export-ignore
+**/*.log export-ignore
+*.zip export-ignore
